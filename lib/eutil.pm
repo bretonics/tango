@@ -1,4 +1,4 @@
-package eutil;
+package Eutil;
 
 use Exporter qw(import);
 our @ISA = qw(Exporter);
@@ -8,30 +8,31 @@ use warnings; use strict; use diagnostics; use feature qw(say);
 use Carp;
 use Bio::DB::EUtilities;
 
-
-#####################
+# =============================================
 #
 # 	Created by: Andres Breton
-#	File: eutil.pl
+#	File: eutil.pm
 #
-#####################
+# =============================================
 
 
 sub getNCBIfile {
-    my ($id, $outDir, $forceDownload, $db, $retType, $email) = @_;
+    my ($ID, $outDir, $FORCE, $DATABASE, $TYPE, $email) = @_;
+
     my $eutil = Bio::DB::EUtilities->new(
-                -eutil => "efetch",
-                -db => $db,
-                -id => $id,
-                -email => $email,
-                -rettype => $retType,
+            -eutil => "efetch",
+            -db => $DATABASE,
+            -id => $ID,
+            -email => $email,
+            -rettype => $TYPE,
     );
 
-    my $outFile = $outDir."/$id.".$retType;
+    my $outFile = $outDir."/$ID.".$TYPE;
 
     #Fetch
     $eutil->get_Response( -file => $outFile);
-    say "Fetching data from NCBI for ID: $id";
-    sleep(3);
+    say "Fetching data from NCBI for ID $ID";
+    sleep(3); #Don't overload NCBI requests
+    return 1;
 }
 1;
