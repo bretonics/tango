@@ -10,14 +10,16 @@ use Bio::DB::EUtilities;
 
 # =============================================
 #
-# 	Created by: Andres Breton
-#	File: eutil.pm
+# 	MASTERED BY: Andres Breton
+#	FILE: eutil.pm
 #
 # =============================================
 
-
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# MAIN
 sub getNCBIfile {
     my ($ID, $outDir, $FORCE, $DATABASE, $TYPE, $email) = @_;
+    my $outFile = $outDir ."/$ID." .$TYPE;
 
     my $eutil = Bio::DB::EUtilities->new(
             -eutil => "efetch",
@@ -27,12 +29,10 @@ sub getNCBIfile {
             -rettype => $TYPE,
     );
 
-    my $outFile = $outDir."/$ID.".$TYPE;
-
     #Fetch
-    $eutil->get_Response( -file => $outFile);
     say "Fetching data from NCBI for ID $ID";
+    $eutil->get_Response( -file => $outFile);
     sleep(3); #Don't overload NCBI requests
-    return 1;
+    return ($outFile, 1);
 }
 1;
