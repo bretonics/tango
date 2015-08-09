@@ -90,7 +90,14 @@ foreach my $id (@IDS) {
     ($NCBIfile, $NCBIstatus) = getNCBIfile($id, $outDir, $FORCE, $DATABASE, $TYPE, $email);
     # Check NCBI Successful Download
     if($NCBIstatus != 1) {
-        die "Something happened while fetching. Could not get file from NCBI.", $!;
+        say "Something happened while fetching. Could not get file from NCBI.", $!;
+        # Retry on Fail
+        print "Would you like to retry? (y/n)";
+        my $response = <>; chomp $response;
+        if ($response eq "y" || $response eq "yes") {
+            ($NCBIfile, $NCBIstatus) = getNCBIfile($id, $outDir, $FORCE, $DATABASE, $TYPE, $email);
+        }
+
     }else {
         # Parse File
         ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $proteinID, $translation) = parseFile($NCBIfile, $id, $TYPE);
