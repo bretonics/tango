@@ -6,6 +6,7 @@ our @EXPORT = qw(parseHeader parseFeatures); #functions exported by default
 
 use warnings; use strict; use diagnostics; use feature qw(say);
 use Carp;
+use Bio::DB::GenBank; use Bio::SeqFeatureI;
 
 # =============================================
 #
@@ -22,7 +23,7 @@ sub parseHeader {
         croak "Can't open $NCBIfile for reading " , $!;
     }
 
-    ## Get entire file in variable
+    # Slurp File
     $/ = ''; #line separator
     my $FILE = <INFILE>;
     $/ = "\n";  #set back line separator
@@ -34,20 +35,39 @@ sub parseHeader {
     my $accession = getAccession($FILE);
     # Get Version
     my $version = getVersion($FILE);
+    # Get GI
+    my $gi = getGI($FILE);
     # Get Organism
     my $organism = getOrganism($FILE);
     # Get Sequence
     my $sequence = getSequence($FILE);
     # Get Gene
-    my $gene = getGene($FILE);
-    # Get Protein ID
-    my $proteinID = getProteinID($FILE);
+    # my $gene = getGene($FILE);
 
-    return $locus, $seqLen, $accession, $version, $organism, $sequence, $gene, $proteinID;
+    return $locus, $seqLen, $accession, $version, $gi, $organism, $sequence;
 }
 
 sub parseFeatures {
-    my () = @_;
+    my ($id) = @_;
+    my ($proteinID, $translation, $gene) = qw(NA NA NA);
+    my $dbObject = Bio::DB::GenBank->new;   #set database object
+    my $seqObject = $dbObject->get_Seq_by_id($id);  #set seq object
+    for my $feature ($seqObject->get_SeqFeatures) {   #gets seqObject features
+        # Get Protein ID and Translation
+        if($feature->primary_tag eq "CDS") {
+            ($proteinID, $translation) = getProteinID($feature);
+
+            # if($feature->has_tag("protein_id")) {
+            #     ($proteinID) = $feature->get_tag_values("protein_id");
+            #     ($translation) = $feature->get_tag_values("translation");
+            # }
+        }
+        # Get Gene
+        if ($feature->primary_tag eq "gene") {
+            ($gene) = getGene($feature);
+        }
+    }
+    return $proteinID, $translation, $gene;
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -74,6 +94,16 @@ sub getVersion {
         }
 }
 
+sub getGI {
+	my ($file) = @_;
+	if($file =~ /^VERSION.*GI:(\w+)/m){
+		my $gi = $1; return $gi;
+	}
+	else{
+		croak "ERROR getting GI", $!;
+	}
+}
+
 sub getOrganism {
     my ($file) = @_;
     if($file =~ /organism="(.*?)"/) {
@@ -84,7 +114,7 @@ sub getOrganism {
 sub getSequence {
     my ($file) = @_;
     my $seq;
-	if($file=~/ORIGIN\s*(.*)\/\//s){
+	if($file =~ /ORIGIN\s*(.*)\/\//s){
 	    $seq = $1;
 	}
 	else{
@@ -95,21 +125,44 @@ sub getSequence {
 }
 
 sub getGene {
-	my ($file) = @_;
-	if($file=~/gene="(.*?)"/s){
-		my $gene = $1; return $gene;
+	my ($feature) = @_;
+    my $gene;
+	if($feature->has_tag("gene")) {
+        ($gene) = $feature->get_tag_values("gene");
+	}else{
+		# return "unknown";
 	}
-	else{
-		return 'unknown';
-	}
+    return $gene;
 }
+# sub getGene {
+# 	my ($file) = @_;
+# 	if($file=~/gene="(.*?)"/s){
+# 		my $gene = $1; return $gene;
+# 	}
+# 	else{
+# 		return 'unknown';
+# 	}
+# }
 
 sub getProteinID {
-	my ($file) = @_;
-	if($file=~/protein_id="(.*?)"/s){
-		my $proteinID = $1; return $proteinID;
+	my ($feature) = @_;
+    my ($proteinID, $translation);
+    if($feature->has_tag("protein_id")) {
+        ($proteinID) = $feature->get_tag_values("protein_id");
+        ($translation) = $feature->get_tag_values("translation");
+    }else{
+		# return "unknown";
 	}
-	else{
-		return 'unknown';
-	}
+    return $proteinID, $translation;
 }
+
+# sub getProteinID {
+# 	my ($file) = @_;
+# 	if($file=~/protein_id="(.*?)"/s){
+# 		my $proteinID = $1; return $proteinID;
+# 	}
+# 	else{
+# 		return 'unknown';
+# 	}
+# }
+1;

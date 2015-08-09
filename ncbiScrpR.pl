@@ -23,7 +23,7 @@ use Eutil; use Parser; use Database;
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # VARIABLES
 my $outDir = createDownloadDir();
-my $email = 'breton.a@husky.neu.edu';
+my $email = 'breton.a@husky.neu.edu'; #use your own email
 my ($NCBIfile, $NCBIstatus);
 my ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $proteinID, $translation);
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -97,7 +97,6 @@ foreach my $id (@IDS) {
         if ($response eq "y" || $response eq "yes") {
             ($NCBIfile, $NCBIstatus) = getNCBIfile($id, $outDir, $FORCE, $DATABASE, $TYPE, $email);
         }
-
     }else {
         # Parse File
         ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $proteinID, $translation) = parseFile($NCBIfile, $id, $TYPE);
@@ -115,13 +114,13 @@ foreach my $id (@IDS) {
 # SUBS
 sub parseFile {
     my ($NCBIfile, $id, $TYPE) = @_;
-    my ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $proteinID, $translation);
+    my ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $proteinID, $translation, $gene);
 
     if ($TYPE eq "gb") {
-        say "Getting NCBI file [header] content...\n";
+        say "\tGetting NCBI file [header] content...";
         ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene) = parseHeader($NCBIfile);
-        say "Getting NCBI file [features] content:...\n";
-        ($proteinID, $translation) = parseFeatures($id); say "Features: $proteinID, $translation";
+        say "\tGetting NCBI file [features] content...\n";
+        ($proteinID, $translation, $gene) = parseFeatures($id); say "Features: $proteinID, $translation, $gene";
     }
     return $locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $proteinID, $translation;
 }
