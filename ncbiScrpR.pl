@@ -25,6 +25,7 @@ use Eutil; use Parser; use Database;
 my $outDir = createDownloadDir();
 my $email = 'breton.a@husky.neu.edu';
 my ($NCBIfile, $NCBIstatus);
+my ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $proteinID, $translation);
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # COMMAND LINE
 my @IDS;
@@ -32,13 +33,13 @@ my $FILE = "";
 my $DATABASE = "";
 my $TYPE = "gb";
 my $FORCE = "0"; #default- Not force
-my $SQLDB = "";
+my $SQLDB = "NCBIdatabase"; #defaults to
 my $usage= "\n\n $0 [options]\n
 Options:
     -ids    IDs
-    -file   File with IDS [optional]
+    -file   File with IDS [CSV or TXT]
     -db     Database (Nucleotide, protein, etc..) [optional]
-    -type   gb, fasta etc... [optional]
+    -type   gb, fasta, etc... [optional]
     -force  Force download? [optional]
     -sql    SQL database name
     -help   Shows this message
@@ -46,7 +47,7 @@ Options:
 
 # OPTIONS
 GetOptions(
-    'id=i{1,}'  =>\@IDS,
+    'id:i{1,}'  =>\@IDS,
     'file:s'    =>\$FILE,
     'db=s'      =>\$DATABASE,
     'type:s'    =>\$TYPE,
@@ -56,8 +57,24 @@ GetOptions(
 )or pod2usage(2);
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # CHECKS
+# File vs ID List
+if($FILE ne "") {
+    unless (open(INFILE, "<", $FILE)) {
+        die "Could not open $FILE", $!;
+    }
+    # Check CSV or TXT File
+    if ($FILE =~ /.+.csv/) {
+        @IDS = split(/,/, <INFILE>);
+        say "this IDs = @IDS";
+    }elsif($FILE =~ /.+.txt/) {
+        @IDS = <INFILE>;
+    }else{
+        warn "Could not determine file delimiter. Try \",\" or \"\n\"";
+    }
+    close INFILE;
+}
 unless(@IDS) {
-    die "Did not provide an ID, -id 34577062", $!, $usage;
+    die "Did not provide ID(s), -id 34577062 or -file <file>", $!, $usage;
 }
 unless($DATABASE) {
     die "Did not provide a database, -db nucleotide", $!, $usage;
@@ -65,16 +82,18 @@ unless($DATABASE) {
 # unless($TYPE) {
 #     die "Did not provide a type format, -type gb", $!, $usage;
 # }
-$SQLDB = "NCBIdatabase" unless $SQLDB ne ""; #default SQL database name
+# $SQLDB = "NCBIdatabase" unless $SQLDB ne ""; #default SQL database name
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # CALLSs
 foreach my $id (@IDS) {
+    # Get NCBI File
     ($NCBIfile, $NCBIstatus) = getNCBIfile($id, $outDir, $FORCE, $DATABASE, $TYPE, $email);
+    # Check NCBI Successful Download
     if($NCBIstatus != 1) {
-        die "Something happened. Could not get file from NCBI", $!;
+        die "Something happened while fetching. Could not get file from NCBI.", $!;
     }else {
-        say "Getting NCBI file header content...";
-        parseFile($NCBIfile, $TYPE);
+        # Parse File
+        ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $proteinID, $translation) = parseFile($NCBIfile, $id, $TYPE);
     }
 }
 
@@ -88,10 +107,16 @@ foreach my $id (@IDS) {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # SUBS
 sub parseFile {
-    my ($NCBIfile, $TYPE) = @_;
+    my ($NCBIfile, $id, $TYPE) = @_;
+    my ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $proteinID, $translation);
+
     if ($TYPE eq "gb") {
-        my ($locus, $seqLen, $accession, $version, $organism, $sequence, $gene, $proteinID) = parseHeader($NCBIfile);
+        say "Getting NCBI file [header] content...\n";
+        ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene) = parseHeader($NCBIfile);
+        say "Getting NCBI file [features] content:...\n";
+        ($proteinID, $translation) = parseFeatures($id); say "Features: $proteinID, $translation";
     }
+    return $locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $proteinID, $translation;
 }
 
 sub createDownloadDir{
