@@ -22,6 +22,7 @@ sub parseHeader {
     unless(open(INFILE, "<", $NCBIfile)) {
         croak "Can't open $NCBIfile for reading " , $!;
     }
+    my ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence) = qw(NA NA NA NA NA NA NA);
 
     # Slurp File
     $/ = ''; #line separator
@@ -30,19 +31,17 @@ sub parseHeader {
     close INFILE;
 
     # Get Locus Name and Sequence Length
-    my ($locus, $seqLen) = getLocus($FILE);
+    ($locus, $seqLen) = getLocus($FILE);
     # Get Accession
-    my $accession = getAccession($FILE);
+    $accession = getAccession($FILE);
     # Get Version
-    my $version = getVersion($FILE);
+    $version = getVersion($FILE);
     # Get GI
-    my $gi = getGI($FILE);
+    $gi = getGI($FILE);
     # Get Organism
-    my $organism = getOrganism($FILE);
+    $organism = getOrganism($FILE);
     # Get Sequence
-    my $sequence = getSequence($FILE);
-    # Get Gene
-    # my $gene = getGene($FILE);
+    $sequence = getSequence($FILE);
 
     return $locus, $seqLen, $accession, $version, $gi, $organism, $sequence;
 }
@@ -134,15 +133,6 @@ sub getGene {
 	}
     return $gene;
 }
-# sub getGene {
-# 	my ($file) = @_;
-# 	if($file=~/gene="(.*?)"/s){
-# 		my $gene = $1; return $gene;
-# 	}
-# 	else{
-# 		return 'unknown';
-# 	}
-# }
 
 sub getProteinID {
 	my ($feature) = @_;
@@ -155,14 +145,4 @@ sub getProteinID {
 	}
     return $proteinID, $translation;
 }
-
-# sub getProteinID {
-# 	my ($file) = @_;
-# 	if($file=~/protein_id="(.*?)"/s){
-# 		my $proteinID = $1; return $proteinID;
-# 	}
-# 	else{
-# 		return 'unknown';
-# 	}
-# }
 1;
