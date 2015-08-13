@@ -29,7 +29,7 @@ my ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $pr
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # COMMAND LINE
 my @IDS;
-my $FILE = "";
+my $FILE;
 my $DATABASE = "";
 my $TYPE = "gb";
 my $FORCE = "0"; #default- Not force
@@ -59,22 +59,10 @@ GetOptions(
 # CHECKS
 # File vs ID List
 if($FILE ne "") {
-    unless (open(INFILE, "<", $FILE)) {
-        die "Could not open $FILE", $!;
-    }
-    # Check CSV or TXT File
-    if ($FILE =~ /.+.csv/) {
-        @IDS = split(/,/, <INFILE>);
-        say "this IDs = @IDS";
-    }elsif($FILE =~ /.+.txt/) {
-        @IDS = <INFILE>;
-    }else{
-        warn "Could not determine file delimiter. Try \",\" or \"\n\"";
-    }
-    close INFILE;
+    checkFile($FILE);
 }
 unless(@IDS) {
-    die "Did not provide ID(s), -id 34577062 or -file <file>", $!, $usage;
+    warn "Did not provide ID(s), -id 34577062 or -file <file>", $!, $usage; exit;
 }
 unless($DATABASE) {
     die "Did not provide a database, -db nucleotide", $!, $usage;
@@ -84,24 +72,9 @@ unless($DATABASE) {
 # }
 # $SQLDB = "NCBIdatabase" unless $SQLDB ne ""; #default SQL database name
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# CALLSs
-foreach my $id (@IDS) {
-    # Get NCBI File
-    ($NCBIfile, $NCBIstatus) = getNCBIfile($id, $outDir, $FORCE, $DATABASE, $TYPE, $email);
-    # Check NCBI Successful Download
-    if($NCBIstatus != 1) {
-        say "Something happened while fetching. Could not get file from NCBI.", $!;
-        # Retry on Fail
-        print "Would you like to retry? (y/n)";
-        my $response = <>; chomp $response;
-        if ($response eq "y" || $response eq "yes") {
-            ($NCBIfile, $NCBIstatus) = getNCBIfile($id, $outDir, $FORCE, $DATABASE, $TYPE, $email);
-        }
-    }else {
-        # Parse File
-        ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $proteinID, $translation) = parseFile($NCBIfile, $id, $TYPE);
-    }
-}
+# CALLS
+($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $proteinID, $translation) = callEutil(@IDS);
+
 
 # Store in SQL database
 # system("dbDeamon.r", $SQLDB, $ID, $accession, $seqLen, $locus, $organism, $version); #call R script
@@ -112,23 +85,75 @@ foreach my $id (@IDS) {
 # }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # SUBS
+sub checkFile {
+    my ($FILE) = @_;
+    unless (open(INFILE, "<", $FILE)) {
+        warn "Could not open $FILE", $!;
+    }
+    # Check CSV or TXT File
+    if ($FILE =~ /.+.csv/) {
+        @IDS = split(/,/, <INFILE>);
+    }elsif($FILE =~ /.+.txt/) {
+        @IDS = <INFILE>;
+    }else{
+        die "Could not determine file delimiter. Try \",\" or \"\\n\"";
+    }
+    close INFILE;
+}
+
+sub callEutil {
+    my (@IDS) = @_;
+    foreach my $id (@IDS) {
+        # Get NCBI File
+        ($NCBIfile, $NCBIstatus) = getNCBIfile($id, $outDir, $FORCE, $DATABASE, $TYPE, $email);
+        # Check NCBI Successful Download
+        if($NCBIstatus != 1) {
+            while ($NCBIstatus != 1) {
+                ($NCBIfile, $NCBIstatus) = failedDownload($NCBIstatus, $id, $outDir, $FORCE, $DATABASE, $TYPE, $email);
+            }
+        }else {
+            # Parse File
+            ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $proteinID, $translation) = parseFile($NCBIfile, $id, $TYPE);
+        }
+        print "Wait...";
+        my $timer = 3;
+        while($timer--) {
+            print " $timer";
+            sleep(1);
+        } print "\n";
+    }
+}
+
 sub parseFile {
     my ($NCBIfile, $id, $TYPE) = @_;
     my ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $proteinID, $translation, $gene);
-
+    say "Parsing file $NCBIfile:";
     if ($TYPE eq "gb") {
-        say "\tGetting NCBI file [header] content...";
+        say "Getting NCBI file [header] content...";
         ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene) = parseHeader($NCBIfile);
-        say "\tGetting NCBI file [features] content...\n";
-        ($proteinID, $translation, $gene) = parseFeatures($id); say "Features: $proteinID, $translation, $gene";
+        say "Getting NCBI file [features] content...\n";
     }
     return $locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $proteinID, $translation;
 }
 
 sub createDownloadDir{
-    my $outDir = "Output";
+    my $outDir = "Data";
     if (! -e $outDir){
         `mkdir $outDir`;
     }
     return $outDir;
+}
+
+sub failedDownload {
+    my ($NCBIstatus, $id, $outDir, $FORCE, $DATABASE, $TYPE, $email) = @_;
+    say "Something happened while fetching. Could not get file from NCBI.", $!;
+    # Retry on Fail
+    print "Would you like to retry? (y/n)";
+    my $response = <>; chomp $response;
+    if ($response eq "y" || $response eq "yes") {
+        ($NCBIfile, $NCBIstatus) = getNCBIfile($id, $outDir, $FORCE, $DATABASE, $TYPE, $email);
+        return $NCBIfile, $NCBIstatus;
+    }else {
+        die "Fetching cancelled by user", $!;
+    }
 }
