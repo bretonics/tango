@@ -29,7 +29,7 @@ my ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $pr
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # COMMAND LINE
 my @IDS;
-my $FILE;
+my $FILE = "";
 my $DATABASE = "";
 my $TYPE = "gb";
 my $FORCE = "0"; #default- Not force
@@ -129,9 +129,8 @@ sub parseFile {
     my ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $proteinID, $translation, $gene);
     say "Parsing file $NCBIfile:";
     if ($TYPE eq "gb") {
-        say "Getting NCBI file [header] content...";
         ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene) = parseHeader($NCBIfile);
-        say "Getting NCBI file [features] content...\n";
+        ($sequence, $proteinID, $translation, $gene) = parseFeatures($id);
     }
     return $locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $proteinID, $translation;
 }
