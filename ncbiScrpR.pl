@@ -12,7 +12,7 @@ use Eutil; use Parser; use Database;
 
 # =============================================
 #
-#	MASTERED BY: Andres Breton
+#	CAPITAN: Andres Breton
 #	FILE: ncbiScrpR.pl
 #   USAGE:
 #	LICENSE:
@@ -30,61 +30,60 @@ my ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $pr
 # COMMAND LINE
 my @IDS;
 my $FILE = "";
-my $DATABASE = "";
+my $DATABASE = "nuccore"; #defaults to nucleotide
 my $TYPE = "gb";
 my $FORCE = "0"; #default- Not force
-my $SQLDB = "NCBIdatabase"; #defaults to
-my $usage= "\n\n $0 [options]\n
+my $DBNAME = "NCBI_database"; #defaults to
+my $COLLECTION = "Download";
+my $TASK = "insert";
+my $usage = "\n\n $0 [options]\n
 Options:
-    -ids    IDs
-    -file   File with IDS [CSV or TXT]
-    -db     Database (Nucleotide, protein, etc..) [optional]
-    -type   gb, fasta, etc... [optional]
-    -force  Force download? [optional]
-    -sql    SQL database name
-    -help   Shows this message
+    -ids            IDs
+    -file           File with IDS [CSV or TXT]
+    -db             Database (Nucleotide, protein, etc..) [optional]
+    -type           gb, fasta, etc... [optional]
+    -force          Force download? [optional]
+    -mongo          MongoDB database name
+    -collection     Collection name in Mongo database
+    -task           Insert, update, remove data from database
+    -help           Shows this message
 \n";
 
 # OPTIONS
 GetOptions(
-    'id:i{1,}'  =>\@IDS,
-    'file:s'    =>\$FILE,
-    'db=s'      =>\$DATABASE,
-    'type:s'    =>\$TYPE,
-    'force:1'   =>\$FORCE,
-    'sql:s'     =>\$SQLDB,
-    help        =>sub{pod2usage($usage);}
+    'id:i{1,}'      =>\@IDS,
+    'file:s'        =>\$FILE,
+    'db:s'          =>\$DATABASE,
+    'type:s'        =>\$TYPE,
+    'force:1'       =>\$FORCE,
+    'mongo:s'       =>\$DBNAME,
+    'collection:s'  =>\$COLLECTION,
+    'insert:s'      =>\$TASK,
+    help            =>sub{pod2usage($usage);}
 )or pod2usage(2);
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# CHECKS
-# File vs ID List
-if($FILE ne "") {
-    checkFile($FILE);
-}
-unless(@IDS) {
-    warn "Did not provide ID(s), -id 34577062 or -file <file>", $!, $usage; exit;
-}
-unless($DATABASE) {
-    die "Did not provide a database, -db nucleotide", $!, $usage;
-}
-# unless($TYPE) {
-#     die "Did not provide a type format, -type gb", $!, $usage;
-# }
-# $SQLDB = "NCBIdatabase" unless $SQLDB ne ""; #default SQL database name
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # CALLS
-($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $proteinID, $translation) = callEutil(@IDS);
-
-
-# Store in SQL database
-# system("dbDeamon.r", $SQLDB, $ID, $accession, $seqLen, $locus, $organism, $version); #call R script
-# if($? == -1) {
-#   print "Command failed: $!\n";
-# }else {
-#   printf "Command exited with value %d", $? >> 8;
-# }
+checks($FILE, @IDS, $COLLECTION); # check parameters/arguments
+startMongoDB($DBNAME, $outDir);
+callEutil(@IDS);
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # SUBS
+sub checks {
+    # File vs ID List
+    if ($FILE ne "") {
+        checkFile($FILE);
+    }
+    unless (@IDS) {
+        warn "Did not provide ID(s), -id 34577062 or -file <file>", $!, $usage; exit;
+    }
+    # unless($DATABASE) {
+    #     die "Did not provide a database, -db nucleotide", $!, $usage;
+    # }
+    unless ($COLLECTION ne "Download") {
+        say "\nNo database collection name entered. Defaulting to $COLLECTION as collection name.\n";
+    }
+}
+
 sub checkFile {
     my ($FILE) = @_;
     unless (open(INFILE, "<", $FILE)) {
@@ -111,16 +110,14 @@ sub callEutil {
             while ($NCBIstatus != 1) {
                 ($NCBIfile, $NCBIstatus) = failedDownload($NCBIstatus, $id, $outDir, $FORCE, $DATABASE, $TYPE, $email);
             }
+            # Parse File
+            ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $proteinID, $translation) = parseFile($NCBIfile, $id, $TYPE);
         }else {
             # Parse File
             ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $proteinID, $translation) = parseFile($NCBIfile, $id, $TYPE);
         }
-        print "Wait...";
-        my $timer = 3;
-        while($timer--) {
-            print " $timer";
-            sleep(1);
-        } print "\n";
+        # Store Data in MongoDB database
+        databaseConnection($DBNAME, $TASK, $COLLECTION, $gi, $accession, $version, $locus, $organism, $sequence, $seqLen, $gene, $proteinID, $translation);
     }
 }
 
@@ -135,7 +132,7 @@ sub parseFile {
     return $locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $proteinID, $translation;
 }
 
-sub createDownloadDir{
+sub createDownloadDir {
     my $outDir = "Data";
     if (! -e $outDir){
         `mkdir $outDir`;
