@@ -26,6 +26,7 @@ my $outDir = createDownloadDir();
 my $email = 'breton.a@husky.neu.edu'; #use your own email
 my ($NCBIfile, $NCBIstatus);
 my ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $proteinID, $translation);
+my $PID;
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # COMMAND LINE
 my @IDS;
@@ -33,7 +34,7 @@ my $FILE = "";
 my $DATABASE = "nuccore"; #defaults to nucleotide
 my $TYPE = "gb";
 my $FORCE = "0"; #default- Not force
-my $DBNAME = "NCBI_database"; #defaults to
+my $MONGODB = "NCBI_database"; #defaults to
 my $COLLECTION = "Download";
 my $TASK = "insert";
 my $usage = "\n\n $0 [options]\n
@@ -56,7 +57,7 @@ GetOptions(
     'db:s'          =>\$DATABASE,
     'type:s'        =>\$TYPE,
     'force:1'       =>\$FORCE,
-    'mongo:s'       =>\$DBNAME,
+    'mongo:s'       =>\$MONGODB,
     'collection:s'  =>\$COLLECTION,
     'insert:s'      =>\$TASK,
     help            =>sub{pod2usage($usage);}
@@ -64,8 +65,8 @@ GetOptions(
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # CALLS
 checks($FILE, @IDS, $COLLECTION); # check parameters/arguments
-startMongoDB($DBNAME, $outDir);
-callEutil(@IDS);
+$PID = startMongoDB($MONGODB, $outDir);
+callEutil(\@IDS, $PID);
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # SUBS
 sub checks {
@@ -80,7 +81,7 @@ sub checks {
     #     die "Did not provide a database, -db nucleotide", $!, $usage;
     # }
     unless ($COLLECTION ne "Download") {
-        say "\nNo database collection name entered. Defaulting to $COLLECTION as collection name.\n";
+        say "\nNo database collection name entered. Defaulting to \"$COLLECTION\" as collection name.\n";
     }
 }
 
@@ -101,7 +102,8 @@ sub checkFile {
 }
 
 sub callEutil {
-    my (@IDS) = @_;
+    my ($IDS, $PID) = @_;
+    my @IDS = @$IDS; #dereference IDS array passed
     foreach my $id (@IDS) {
         # Get NCBI File
         ($NCBIfile, $NCBIstatus) = getNCBIfile($id, $outDir, $FORCE, $DATABASE, $TYPE, $email);
@@ -117,8 +119,9 @@ sub callEutil {
             ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $proteinID, $translation) = parseFile($NCBIfile, $id, $TYPE);
         }
         # Store Data in MongoDB database
-        databaseConnection($DBNAME, $TASK, $COLLECTION, $gi, $accession, $version, $locus, $organism, $sequence, $seqLen, $gene, $proteinID, $translation);
+        databaseConnection($MONGODB, $TASK, $COLLECTION, $id, $gi, $accession, $version, $locus, $organism, $sequence, $seqLen, $gene, $proteinID, $translation);
     }
+    say "Closing MongoDB..."; exec("kill $PID"); #shurdown mongod deamon
 }
 
 sub parseFile {

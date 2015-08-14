@@ -19,27 +19,34 @@ use MongoDB; use MongoDB::OID;
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # MAIN
 sub startMongoDB {
-    my ($DBNAME, $outDir) = @_;
+    my ($MONGODB, $outDir) = @_;
     my $dbDir = $outDir."/db";
     `mkdir $dbDir` unless (-e $dbDir);
     my $mongoLog = $dbDir."/mongo.log";
-    my $command = "mongod --dbpath $dbDir --logpath $mongoLog";
-    system($command);
-    if ($? == -1) {
-        croak "Failed to execute $command", $1;
+
+    my $command = "mongod --dbpath $dbDir --logpath $mongoLog --fork";
+    my @result = `$command`; #get shell results
+    if ($? != 0) {
+        confess "Failed to execute $command\nThis could be that an instance of [mongod] is already running. Please check processes for mongod.", $!;
+
+        # # Check mongod instance
+        # my $pid = $result[1] =~ /.+:\s(\d+)$/; $pid = $1; #get child PID
     }else {
+        my $pid = $result[1] =~ /.+:\s(\d+)$/; $pid = $1; #get child PID
         say "\nMongoDB started...";
+        return $pid;
     }
 }
 
 sub databaseConnection {
-    my ($DBNAME, $TASK, $COLLECTION, $gi, $accession, $version, $locus, $organism, $sequence, $seqLen, $gene, $proteinID, $translation) = @_;
+    my ($MONGODB, $TASK, $COLLECTION, $id, $gi, $accession, $version, $locus, $organism, $sequence, $seqLen, $gene, $proteinID, $translation) = @_;
 
     my $client = MongoDB::MongoClient->new; #connect to local db server
-    my $db = $client->get_database($DBNAME); #get MongoDB databse
+    my $db = $client->get_database($MONGODB); #get MongoDB databse
     my $collection = $db->get_collection($COLLECTION); #get collection
 
     # Operation on Database
+    say "Storing data for ID ($id) into database $MONGODB";
     if ($TASK eq "insert") {
         insertData($collection, $gi, $accession, $version, $locus, $organism, $sequence, $seqLen, $gene, $proteinID, $translation);
     } elsif ($TASK eq "update") {
