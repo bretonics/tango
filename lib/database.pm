@@ -17,6 +17,7 @@ use MongoDB; use MongoDB::OID;
 #
 # =============================================
 
+my @dataFields = qw(_id accession sequence version locus organism seqLength Sequence Gene proteinID translation);
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # MAIN
 sub startMongoDB {
@@ -31,7 +32,7 @@ sub startMongoDB {
     my @result = `$command`; #get shell results
     if ($? == 0) { #Check return value
         $pid = $result[1] =~ /.+:\s(\d+)$/; $pid = $1; #get child PID
-        say "MongoDB successfully started.";
+        say "MongoDB successfully started.\n";
         return $pid;
     } elsif ($? == 25600) { #Possible mongd already running
         say "*********FAILED";
@@ -60,16 +61,16 @@ sub insertData {
     my $collectionObj = databaseConnection($MONGODB, $COLLECTION);
     say "Storing data for ID ($id) into database $MONGODB";
     $collectionObj->insert({_id => $gi, #GI stored as Mongo UID
-                        "Accession" => $accession,
-                        "Sequence" => $sequence,
-                        "Version" => $version,
-                        "Locus" => $locus,
-                        "Organism" => $organism,
-                        "Sequence Length" => $seqLen,
-                        "Sequence" => $sequence,
-                        "Gene" => $gene,
-                        "Protein ID" => $proteinID,
-                        "Translation" => $translation
+                        "accession" => $accession,
+                        "sequence" => $sequence,
+                        "version" => $version,
+                        "locus" => $locus,
+                        "organism" => $organism,
+                        "seqLength" => $seqLen,
+                        "sequence" => $sequence,
+                        "gene" => $gene,
+                        "proteinID" => $proteinID,
+                        "translation" => $translation
                         })
 }
 
@@ -81,10 +82,16 @@ sub updateData {
 }
 
 sub readData {
-    my ($id, $PID, $MONGODB, $COLLECTION, $TASK, $QUERY) = @_;
-    say "READING ID:$id from database...";
+    my ($field, $value, $PID, $MONGODB, $COLLECTION, $TASK) = @_;
     my $collectionObj = databaseConnection($MONGODB, $COLLECTION);
-    $collectionObj->find({});
+    say "\nREADING field \"$field\" value \"$value\" from database...";
+    my $cursor = $collectionObj->find({$field => $value});
+    while (my $obj = $cursor->next) {
+        say "Available fields are:\t@dataFields\n";
+        print "What field do you want? ";
+        my $response = <>; chomp $response;
+        say "Here you go [$response]:\n", $obj->{$response};
+    }
 }
 
 sub removeData {

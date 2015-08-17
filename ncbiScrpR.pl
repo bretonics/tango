@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 use warnings; use strict; use diagnostics; use feature qw(say);
-use Getopt::Long; use Pod::Usage;
+use Getopt::Long; use Pod::Usage; use Data::Dumper;
 
 use File::Basename qw(dirname);
 use Cwd qw(abs_path);
@@ -26,7 +26,7 @@ my $outDir = createDownloadDir();
 my $email = 'breton.a@husky.neu.edu'; #use your own email
 my ($NCBIfile, $NCBIstatus);
 my ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $proteinID, $translation);
-my $PID;
+my ($PID, %fieldValues);
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # COMMAND LINE
 my @IDS;
@@ -37,7 +37,7 @@ my $FORCE = "0"; #default- Not force
 my $MONGODB = "NCBI_database"; #defaults to
 my $COLLECTION = "Download";
 my $TASK = "insert";
-my $QUERY = "";
+my @QUERY;
 my $usage = "\n\n $0 [options]\n
 Options:
     -ids            IDs
@@ -62,23 +62,34 @@ GetOptions(
     'mongo:s'       =>\$MONGODB,
     'collection:s'  =>\$COLLECTION,
     'task:s'        =>\$TASK,
-    'query:s{,1}'   =>\$QUERY,
+    'query:s{1,}'   =>\@QUERY,
     help            =>sub{pod2usage($usage);}
 )or pod2usage(2);
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # CALLS
-argChecks($FILE, @IDS, $MONGODB, $COLLECTION, $TASK);
+argChecks();
 $PID = startMongoDB($MONGODB, $outDir);
-callEutil(\@IDS, $PID, $MONGODB, $TASK, $COLLECTION);
+if ($TASK eq "insert") {
+    callEutil(\@IDS, $PID, $MONGODB, $COLLECTION);
+} else {
+    sendToMongo($PID, $MONGODB, $COLLECTION, $TASK);
+}
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # SUBS
 sub argChecks { #Check Arguments/Parameters
-    # File vs ID List
-    if ($FILE ne "") {
-        checkFile($FILE);
-    } else {
-        unless (@IDS) {
-            warn "Did not provide ID(s), -id 34577062 or -file <file>", $!, $usage; exit;
+    # Pase Query Field => Value Pairs
+    if (@QUERY) {
+        parseQuery(@QUERY);
+    }
+    # Skip ID Check if accessing DB Only
+    unless (@QUERY) {
+        # File vs ID List
+        if ($FILE ne "") {
+            checkFile($FILE);
+        } else {
+            unless (@IDS) {
+                warn "Did not provide ID(s), -id 34577062 or -file <file>", $!, $usage; exit;
+            }
         }
     }
     # Defaults Warning
@@ -101,9 +112,12 @@ sub checkFile { #Check File Format
     }
     # Check CSV or TXT File
     if ($FILE =~ /.+.csv/) {
-        @IDS = split(/,/, <INFILE>); say @IDS;
+        @IDS = split(/,/, <INFILE>);
     }elsif($FILE =~ /.+.txt/) {
-        @IDS = <INFILE>;
+        while(<INFILE>) {
+            chomp;
+            push @IDS, $_;
+        }
     }else{
         die "Could not determine file delimiter. Try \",\" or \"\\n\"";
     }
@@ -111,8 +125,8 @@ sub checkFile { #Check File Format
 }
 
 sub callEutil { #Get NCBI File(s), Distribute DB Tasks
-    my ($IDS, $PID, $MONGODB, $TASK, $COLLECTION) = @_;
-    my @IDS = @$IDS; #dereference IDS array passed
+    my ($IDS, $PID, $MONGODB, $COLLECTION) = @_;
+    my @IDS = @$IDS; # Dereference IDS
 
     # Iterate through each ID passed
     foreach my $id (@IDS) {
@@ -128,21 +142,60 @@ sub callEutil { #Get NCBI File(s), Distribute DB Tasks
             # Parse File
             ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $proteinID, $translation) = parseFile($NCBIfile, $id, $TYPE);
         }
+        insertData($MONGODB, $TASK, $COLLECTION, $id, $gi, $accession, $version, $locus, $organism, $sequence, $seqLen, $gene, $proteinID, $translation);
 
-        # Distribute DB Tasks
-        if ($TASK eq "insert") {
-            insertData($MONGODB, $TASK, $COLLECTION, $id, $gi, $accession, $version, $locus, $organism, $sequence, $seqLen, $gene, $proteinID, $translation);
-        } elsif ($TASK eq "update") {
-            updateData($id, $PID, $MONGODB, $COLLECTION, $TASK, $QUERY);
-        } elsif ($TASK eq "read") {
-            readData($id, $PID, $MONGODB, $COLLECTION, $TASK, $QUERY);
-        } elsif ($TASK eq "remove") {
-            removeData($id, $PID, $MONGODB, $COLLECTION, $TASK, $QUERY);
-        } else {
-            die "ERROR: No database operation found! Default is \"insert\", passed was \"$TASK\".", $!;
+        # # Distribute DB Tasks
+        # if ($TASK eq "insert") {
+        #
+        # } elsif ($TASK eq "update") {
+        #     # parseQuery();
+        #     updateData($id, $PID, $MONGODB, $COLLECTION, $TASK, $QUERY);
+        # } elsif ($TASK eq "read") {
+        #
+        #     readData($id, $PID, $MONGODB, $COLLECTION, $TASK, $QUERY);
+        # } elsif ($TASK eq "remove") {
+        #     # parseQuery();
+        #     removeData($id, $PID, $MONGODB, $COLLECTION, $TASK, $QUERY);
+        # } else {
+        #     die "ERROR: No database operation found! Default is \"insert\", passed was \"$TASK\".", $!;
+        # }
+    }
+    shutdownMDB($PID);
+}
+
+sub sendToMongo {
+    my ($PID, $MONGODB, $COLLECTION, $TASK) = @_;
+    # Dereference
+    # my @IDS = @$IDS;
+
+    # Iterate Through Each Query Field<->Value Pair
+    foreach my $field (keys %fieldValues) {
+        foreach my $value (keys $fieldValues{$field}) {
+            # Delegate DB Task
+            if ($TASK eq "update") {
+                updateData($field, $value, $PID, $MONGODB, $COLLECTION, $TASK, @QUERY);
+            } elsif ($TASK eq "read") {
+                readData($field, $value, $PID, $MONGODB, $COLLECTION, $TASK, @QUERY);
+            } elsif ($TASK eq "remove") {
+                # parseQuery();
+                removeData($field, $value, $PID, $MONGODB, $COLLECTION, $TASK, @QUERY);
+            } else {
+                die "ERROR: No database operation found! Default is \"insert\", passed was \"$TASK\".", $!;
+            }
         }
     }
     shutdownMDB($PID);
+}
+
+sub parseQuery {
+    foreach(@QUERY) {
+        chomp;
+        $_ =~ /(.+):(.+)/;
+        my ($field, $value) = ($1, $2); #get field<->value pair
+        if (!defined $fieldValues{$field}{$value}) {
+            $fieldValues{$field}{$value} = 1;
+        }
+    }
 }
 
 sub parseFile { #Parse NCBI File
