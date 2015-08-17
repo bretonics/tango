@@ -30,7 +30,7 @@ sub parseHeader {
     $/ = "\n";  #set back line separator
     close INFILE;
 
-    say "Getting NCBI file [header] content...";
+    say "Getting [header] content...";
     # Get Locus Name and Sequence Length
     ($locus, $seqLen) = getLocus($FILE);
     # Get Accession
@@ -50,7 +50,7 @@ sub parseFeatures {
     my ($proteinID, $translation, $gene) = qw(NA NA NA);
     my $dbObject = Bio::DB::GenBank->new;   #set database object
     my $seqObject = $dbObject->get_Seq_by_id($id);  #set seq object
-    say "Getting NCBI file [features] content...\n";
+    say "Getting [features] content...\n";
     my $sequence = $seqObject->seq();
     for my $feature ($seqObject->get_SeqFeatures) {   #gets seqObject features
         # Get Protein ID and Translation

@@ -30,9 +30,8 @@ sub getNCBIfile {
     );
 
     #Fetch
-    say "\nFetching data from NCBI for ID $ID";
+    say "\nFetching data from NCBI for ID $ID. Wait...\n";
     $eutil->get_Response( -file => $outFile);
-    say "Wait...\n";
     sleep(3); #Don't overload NCBI requests
     return ($outFile, 1);
 }

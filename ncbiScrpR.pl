@@ -37,6 +37,7 @@ my $FORCE = "0"; #default- Not force
 my $MONGODB = "NCBI_database"; #defaults to
 my $COLLECTION = "Download";
 my $TASK = "insert";
+my $QUERY = "";
 my $usage = "\n\n $0 [options]\n
 Options:
     -ids            IDs
@@ -47,6 +48,7 @@ Options:
     -mongo          MongoDB database name
     -collection     Collection name in Mongo database
     -task           Insert, update, remove data from database
+    -query          MongoDB query for [update,read,remove]
     -help           Shows this message
 \n";
 
@@ -59,33 +61,37 @@ GetOptions(
     'force:1'       =>\$FORCE,
     'mongo:s'       =>\$MONGODB,
     'collection:s'  =>\$COLLECTION,
-    'insert:s'      =>\$TASK,
+    'task:s'        =>\$TASK,
+    'query:s{,1}'   =>\$QUERY,
     help            =>sub{pod2usage($usage);}
 )or pod2usage(2);
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # CALLS
-checks($FILE, @IDS, $COLLECTION); # check parameters/arguments
+argChecks($FILE, @IDS, $COLLECTION, $TASK);
 $PID = startMongoDB($MONGODB, $outDir);
-callEutil(\@IDS, $PID);
+callEutil(\@IDS, $PID, $MONGODB, $TASK, $COLLECTION);
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # SUBS
-sub checks {
-    # File vs ID List
-    if ($FILE ne "") {
-        checkFile($FILE);
-    }
-    unless (@IDS) {
-        warn "Did not provide ID(s), -id 34577062 or -file <file>", $!, $usage; exit;
-    }
-    # unless($DATABASE) {
-    #     die "Did not provide a database, -db nucleotide", $!, $usage;
-    # }
-    unless ($COLLECTION ne "Download") {
-        say "\nNo database collection name entered. Defaulting to \"$COLLECTION\" as collection name.\n";
+sub argChecks { #Check Arguments/Parameters
+    if ($TASK eq "insert") {
+        # File vs ID List
+        if ($FILE ne "") {
+            checkFile($FILE);
+        }
+        unless (@IDS) {
+            warn "Did not provide ID(s), -id 34577062 or -file <file>", $!, $usage; exit;
+        }
+        unless($DATABASE ne "nuccore") {
+            say "Did not provide an NCBI database, -db nucleotide. Default \"$DATABASE\" used.";
+        }
+    } else {
+        unless ($COLLECTION ne "Download") {
+            say "\nNo database collection name entered. Defaulting to \"$COLLECTION\" as collection name.";
+        }
     }
 }
 
-sub checkFile {
+sub checkFile { #Check File Format
     my ($FILE) = @_;
     unless (open(INFILE, "<", $FILE)) {
         warn "Could not open $FILE", $!;
@@ -101,30 +107,41 @@ sub checkFile {
     close INFILE;
 }
 
-sub callEutil {
-    my ($IDS, $PID) = @_;
+sub callEutil { #Get NCBI File(s), Distribute DB Tasks
+    my ($IDS, $PID, $MONGODB, $TASK, $COLLECTION) = @_;
     my @IDS = @$IDS; #dereference IDS array passed
+
+    # Iterate through each ID passed
     foreach my $id (@IDS) {
-        # Get NCBI File
-        ($NCBIfile, $NCBIstatus) = getNCBIfile($id, $outDir, $FORCE, $DATABASE, $TYPE, $email);
-        # Check NCBI Successful Download
-        if($NCBIstatus != 1) {
+        ($NCBIfile, $NCBIstatus) = getNCBIfile($id, $outDir, $FORCE, $DATABASE, $TYPE, $email); # Get NCBI File
+
+        if ($NCBIstatus != 1) { #Check Download
             while ($NCBIstatus != 1) {
                 ($NCBIfile, $NCBIstatus) = failedDownload($NCBIstatus, $id, $outDir, $FORCE, $DATABASE, $TYPE, $email);
             }
             # Parse File
             ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $proteinID, $translation) = parseFile($NCBIfile, $id, $TYPE);
-        }else {
+        } else {
             # Parse File
             ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $proteinID, $translation) = parseFile($NCBIfile, $id, $TYPE);
         }
-        # Store Data in MongoDB database
-        databaseConnection($MONGODB, $TASK, $COLLECTION, $id, $gi, $accession, $version, $locus, $organism, $sequence, $seqLen, $gene, $proteinID, $translation);
+
+        # Distribute DB Tasks
+        if ($TASK eq "insert") {
+            insertData($MONGODB, $TASK, $COLLECTION, $id, $gi, $accession, $version, $locus, $organism, $sequence, $seqLen, $gene, $proteinID, $translation);
+        } elsif ($TASK eq "update") {
+            updateData($id, $PID, $MONGODB, $COLLECTION, $TASK, $QUERY);
+        } elsif ($TASK eq "read") {
+            readData($id, $PID, $MONGODB, $COLLECTION, $TASK, $QUERY);
+        } elsif ($TASK eq "remove") {
+            removeData($id, $PID, $MONGODB, $COLLECTION, $TASK, $QUERY);
+        } else {
+            die "ERROR: No database operation found! Default is \"insert\", passed was \"$TASK\".", $!;
+        }
     }
-    say "Closing MongoDB..."; exec("kill $PID"); #shurdown mongod deamon
 }
 
-sub parseFile {
+sub parseFile { #Parse NCBI File
     my ($NCBIfile, $id, $TYPE) = @_;
     my ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $proteinID, $translation, $gene);
     say "Parsing file $NCBIfile:";
@@ -143,7 +160,7 @@ sub createDownloadDir {
     return $outDir;
 }
 
-sub failedDownload {
+sub failedDownload { #NCBI File Fetch Failure
     my ($NCBIstatus, $id, $outDir, $FORCE, $DATABASE, $TYPE, $email) = @_;
     say "Something happened while fetching. Could not get file from NCBI.", $!;
     # Retry on Fail
