@@ -37,6 +37,7 @@ my $FORCE = "0"; #default- Not force
 my $MONGODB = "NCBI_database"; #defaults to
 my $COLLECTION = "Download";
 my $TASK = "insert";
+my $UPDATE;
 my @QUERY;
 my $usage = "\n\n $0 [options]\n
 Options:
@@ -62,6 +63,7 @@ GetOptions(
     'mongo:s'       =>\$MONGODB,
     'collection:s'  =>\$COLLECTION,
     'task:s'        =>\$TASK,
+    'update:s'      =>\$UPDATE,
     'query:s{1,}'   =>\@QUERY,
     help            =>sub{pod2usage($usage);}
 )or pod2usage(2);
@@ -142,23 +144,7 @@ sub callEutil { #Get NCBI File(s), Distribute DB Tasks
             # Parse File
             ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $proteinID, $translation) = parseFile($NCBIfile, $id, $TYPE);
         }
-        insertData($MONGODB, $TASK, $COLLECTION, $id, $gi, $accession, $version, $locus, $organism, $sequence, $seqLen, $gene, $proteinID, $translation);
-
-        # # Distribute DB Tasks
-        # if ($TASK eq "insert") {
-        #
-        # } elsif ($TASK eq "update") {
-        #     # parseQuery();
-        #     updateData($id, $PID, $MONGODB, $COLLECTION, $TASK, $QUERY);
-        # } elsif ($TASK eq "read") {
-        #
-        #     readData($id, $PID, $MONGODB, $COLLECTION, $TASK, $QUERY);
-        # } elsif ($TASK eq "remove") {
-        #     # parseQuery();
-        #     removeData($id, $PID, $MONGODB, $COLLECTION, $TASK, $QUERY);
-        # } else {
-        #     die "ERROR: No database operation found! Default is \"insert\", passed was \"$TASK\".", $!;
-        # }
+        insertData($MONGODB, $COLLECTION, $id, $gi, $accession, $version, $locus, $organism, $sequence, $seqLen, $gene, $proteinID, $translation);
     }
     shutdownMDB($PID);
 }
@@ -173,12 +159,12 @@ sub sendToMongo {
         foreach my $value (keys $fieldValues{$field}) {
             # Delegate DB Task
             if ($TASK eq "update") {
-                updateData($field, $value, $PID, $MONGODB, $COLLECTION, $TASK, @QUERY);
+                updateData($field, $value, $MONGODB, $COLLECTION);
             } elsif ($TASK eq "read") {
-                readData($field, $value, $PID, $MONGODB, $COLLECTION, $TASK, @QUERY);
+                readData($field, $value, $MONGODB, $COLLECTION);
             } elsif ($TASK eq "remove") {
                 # parseQuery();
-                removeData($field, $value, $PID, $MONGODB, $COLLECTION, $TASK, @QUERY);
+                removeData($field, $value, $MONGODB, $COLLECTION);
             } else {
                 die "ERROR: No database operation found! Default is \"insert\", passed was \"$TASK\".", $!;
             }

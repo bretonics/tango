@@ -56,7 +56,7 @@ sub startMongoDB {
 }
 
 sub insertData {
-    my ($MONGODB, $TASK, $COLLECTION, $id, $gi, $accession, $version, $locus, $organism, $sequence, $seqLen, $gene, $proteinID, $translation) = @_;
+    my ($MONGODB, $COLLECTION, $id, $gi, $accession, $version, $locus, $organism, $sequence, $seqLen, $gene, $proteinID, $translation) = @_;
 
     my $collectionObj = databaseConnection($MONGODB, $COLLECTION);
     say "Storing data for ID ($id) into database $MONGODB";
@@ -75,14 +75,19 @@ sub insertData {
 }
 
 sub updateData {
-    my ($id, $PID, $MONGODB, $COLLECTION, $TASK, $QUERY) = @_;
-    say "UPDATING ID:$id in database...";
-    # my $collectionObj = databaseConnection($MONGODB, $COLLECTION);
-    # $collectionObj->update({"" => }, {'' => {'' => }});
+    my ($field, $value, $MONGODB, $COLLECTION) = @_;
+    say "\nUPDATING $field record [$value] in database...";
+    say "Available fields are:\t@dataFields\n";
+    print "What field do you want? ";
+    my $fieldUpdate = <>; chomp $fieldUpdate;
+    print "What is the NEW value for $fieldUpdate field? ";
+    my $newValue = <>; chomp $newValue;
+    my $collectionObj = databaseConnection($MONGODB, $COLLECTION);
+    $collectionObj->update({_id => $value}, {'$set' => {$fieldUpdate => $newValue}});
 }
 
 sub readData {
-    my ($field, $value, $PID, $MONGODB, $COLLECTION, $TASK) = @_;
+    my ($field, $value, $MONGODB, $COLLECTION) = @_;
     my $collectionObj = databaseConnection($MONGODB, $COLLECTION);
     say "\nREADING field \"$field\" value \"$value\" from database...";
     my $cursor = $collectionObj->find({$field => $value});
@@ -95,7 +100,7 @@ sub readData {
 }
 
 sub removeData {
-    my ($id, $PID, $MONGODB, $COLLECTION, $TASK, $QUERY) = @_;
+    my ($id, $MONGODB, $COLLECTION) = @_;
     say "REMOVING ID:$id from database...";
     my $collectionObj = databaseConnection($MONGODB, $COLLECTION);
     # $collectionObj->remove({});
