@@ -100,10 +100,10 @@ sub readData {
 }
 
 sub removeData {
-    my ($id, $MONGODB, $COLLECTION) = @_;
-    say "REMOVING ID:$id from database...";
+    my ($field, $value, $MONGODB, $COLLECTION) = @_;
+    say "REMOVING $field record [$value] in database...";
     my $collectionObj = databaseConnection($MONGODB, $COLLECTION);
-    # $collectionObj->remove({});
+    $collectionObj->remove({$field => $value});
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # HELPERS

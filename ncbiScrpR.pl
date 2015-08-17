@@ -163,7 +163,6 @@ sub sendToMongo {
             } elsif ($TASK eq "read") {
                 readData($field, $value, $MONGODB, $COLLECTION);
             } elsif ($TASK eq "remove") {
-                # parseQuery();
                 removeData($field, $value, $MONGODB, $COLLECTION);
             } else {
                 die "ERROR: No database operation found! Default is \"insert\", passed was \"$TASK\".", $!;
