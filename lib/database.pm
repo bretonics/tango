@@ -7,7 +7,7 @@ our @EXPORT = qw(startMongoDB insertData updateData readData removeData); #funct
 use warnings; use strict; use diagnostics; use feature qw(say);
 use Carp;
 
-use Eutil; use MongoDB; use MongoDB::OID;
+use MongoDB; use MongoDB::OID;
 
 
 # =============================================
@@ -21,21 +21,36 @@ use Eutil; use MongoDB; use MongoDB::OID;
 # MAIN
 sub startMongoDB {
     my ($MONGODB, $outDir) = @_;
+    my $pid;
     my $dbDir = $outDir."/db";
     `mkdir $dbDir` unless (-e $dbDir);
     my $mongoLog = $dbDir."/mongo.log";
 
     my $command = "mongod --dbpath $dbDir --logpath $mongoLog --fork";
+    say "\nStarting MongoDB server...";
     my @result = `$command`; #get shell results
-    if ($? != 0) {
-        confess "Failed to execute $command\nThis could be that an instance of [mongod] is already running. Please check processes for mongod. $?", $!;
-
-        # # Check mongod instance
-        # my $pid = $result[1] =~ /.+:\s(\d+)$/; $pid = $1; #get child PID
-    }else {
-        my $pid = $result[1] =~ /.+:\s(\d+)$/; $pid = $1; #get child PID
-        say "\nMongoDB started...";
+    if ($? == 0) { #Check return value
+        $pid = $result[1] =~ /.+:\s(\d+)$/; $pid = $1; #get child PID
+        say "MongoDB successfully started.";
         return $pid;
+    } elsif ($? == 25600) { #Possible mongd already running
+        say "*********FAILED";
+        say "Could not fork. This was most likely caused by an instance of [mongod] already running.";
+        # Check for Currently Running MongoDB Server
+        my @mongdPS = `ps -e -o pid,args | grep \"mongod\"`;
+        if ($mongdPS[0] =~ /^\s?(\d+)\s+mongod.*/) {
+            $pid = $1;
+            say "YES! Found running process: $mongdPS[0]";
+            print "Would you like to continue (y/n)? ";
+            my $response = lc <>; chomp $response;
+            if ($response eq "yes" || $response eq "y") {
+                return $pid;
+            } else {
+                exit;
+            }
+        }
+    } else {
+        croak "ERROR: Failed to execute $command\n Something happened that did not allow MongoDB server to start!", $!;
     }
 }
 
@@ -63,7 +78,6 @@ sub updateData {
     say "UPDATING ID:$id in database...";
     # my $collectionObj = databaseConnection($MONGODB, $COLLECTION);
     # $collectionObj->update({"" => }, {'' => {'' => }});
-    shutdownMDB($PID);
 }
 
 sub readData {
@@ -71,7 +85,6 @@ sub readData {
     say "READING ID:$id from database...";
     my $collectionObj = databaseConnection($MONGODB, $COLLECTION);
     $collectionObj->find({});
-    shutdownMDB($PID);
 }
 
 sub removeData {
@@ -79,7 +92,6 @@ sub removeData {
     say "REMOVING ID:$id from database...";
     my $collectionObj = databaseConnection($MONGODB, $COLLECTION);
     # $collectionObj->remove({});
-    shutdownMDB($PID);
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # HELPERS
@@ -89,10 +101,5 @@ sub databaseConnection {
     my $db = $client->get_database($MONGODB); #get MongoDB databse
     my $collectionObj = $db->get_collection($COLLECTION); #get collection
     return $collectionObj;
-}
-
-sub shutdownMDB {
-    my ($PID) = @_;
-    say "\nClosing MongoDB.\n"; exec("kill $PID"); #shutdown MongoDB server
 }
 1;

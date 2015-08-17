@@ -67,28 +67,31 @@ GetOptions(
 )or pod2usage(2);
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # CALLS
-argChecks($FILE, @IDS, $COLLECTION, $TASK);
+argChecks($FILE, @IDS, $MONGODB, $COLLECTION, $TASK);
 $PID = startMongoDB($MONGODB, $outDir);
 callEutil(\@IDS, $PID, $MONGODB, $TASK, $COLLECTION);
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # SUBS
 sub argChecks { #Check Arguments/Parameters
-    if ($TASK eq "insert") {
-        # File vs ID List
-        if ($FILE ne "") {
-            checkFile($FILE);
-        }
+    # File vs ID List
+    if ($FILE ne "") {
+        checkFile($FILE);
+    } else {
         unless (@IDS) {
             warn "Did not provide ID(s), -id 34577062 or -file <file>", $!, $usage; exit;
         }
-        unless($DATABASE ne "nuccore") {
-            say "Did not provide an NCBI database, -db nucleotide. Default \"$DATABASE\" used.";
-        }
-    } else {
-        unless ($COLLECTION ne "Download") {
-            say "\nNo database collection name entered. Defaulting to \"$COLLECTION\" as collection name.";
-        }
     }
+    # Defaults Warning
+    unless($DATABASE ne "nuccore") {
+        say "Did not provide an NCBI database, -db nucleotide. Default \"$DATABASE\" used.";
+    }
+    unless ($COLLECTION ne "Download") {
+        say "No database collection name entered. Defaulting to \"$COLLECTION\" as collection name.";
+    }
+    unless ($MONGODB ne "NCBI_database") {
+        say "Did not provide a MongoDB database name. Defaulting to \"$MONGODB\".";
+    }
+
 }
 
 sub checkFile { #Check File Format
@@ -98,7 +101,7 @@ sub checkFile { #Check File Format
     }
     # Check CSV or TXT File
     if ($FILE =~ /.+.csv/) {
-        @IDS = split(/,/, <INFILE>);
+        @IDS = split(/,/, <INFILE>); say @IDS;
     }elsif($FILE =~ /.+.txt/) {
         @IDS = <INFILE>;
     }else{
@@ -139,6 +142,7 @@ sub callEutil { #Get NCBI File(s), Distribute DB Tasks
             die "ERROR: No database operation found! Default is \"insert\", passed was \"$TASK\".", $!;
         }
     }
+    shutdownMDB($PID);
 }
 
 sub parseFile { #Parse NCBI File
@@ -172,4 +176,9 @@ sub failedDownload { #NCBI File Fetch Failure
     }else {
         die "Fetching cancelled by user", $!;
     }
+}
+
+sub shutdownMDB {
+    my ($PID) = @_;
+    say "\nClosing MongoDB.\n"; exec("kill $PID"); #shutdown MongoDB server
 }
