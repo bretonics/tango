@@ -17,7 +17,7 @@ use MongoDB; use MongoDB::OID;
 #
 # =============================================
 
-my @dataFields = qw(_id accession sequence version locus organism seqLength Sequence Gene proteinID translation);
+my @dataFields = qw(_id accession sequence version locus organism seqLength gene proteinID translation);
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # MAIN
 sub startMongoDB {
@@ -49,6 +49,8 @@ sub startMongoDB {
             } else {
                 exit;
             }
+        } else {
+            croak "Sorry, could not find instance of mongod running on system. Please check processes.", $!;
         }
     } else {
         croak "ERROR: Failed to execute $command\n Something happened that did not allow MongoDB server to start!", $!;
@@ -62,7 +64,6 @@ sub insertData {
     say "Storing data for ID ($id) into database $MONGODB";
     $collectionObj->insert({_id => $gi, #GI stored as Mongo UID
                         "accession" => $accession,
-                        "sequence" => $sequence,
                         "version" => $version,
                         "locus" => $locus,
                         "organism" => $organism,
@@ -83,7 +84,8 @@ sub updateData {
     print "What is the NEW value for $fieldUpdate field? ";
     my $newValue = <>; chomp $newValue;
     my $collectionObj = databaseConnection($MONGODB, $COLLECTION);
-    $collectionObj->update({_id => $value}, {'$set' => {$fieldUpdate => $newValue}});
+    $collectionObj->update({$field => $value}, {'$set' => {$fieldUpdate => $newValue}});
+    say "Document $value updated. $fieldUpdate field changed to $newValue.";
 }
 
 sub readData {

@@ -35,21 +35,21 @@ my $DATABASE = "nuccore"; #defaults to nucleotide
 my $TYPE = "gb";
 my $FORCE = "0"; #default- Not force
 my $MONGODB = "NCBI_database"; #defaults to
-my $COLLECTION = "Download";
-my $TASK = "insert";
-my $UPDATE;
-my @QUERY;
+my $COLLECTION = "nuccore";
+my ($INSERT, @UPDATE, @READ, @REMOVE);
 my $usage = "\n\n $0 [options]\n
 Options:
-    -ids            IDs
-    -file           File with IDS [CSV or TXT]
+    -ids            ID(s)
+    -file           File with ID(s) [CSV or TXT]
     -db             Database (Nucleotide, protein, etc..) [optional]
     -type           gb, fasta, etc... [optional]
     -force          Force download? [optional]
     -mongo          MongoDB database name
-    -collection     Collection name in Mongo database
-    -task           Insert, update, remove data from database
-    -query          MongoDB query for [update,read,remove]
+    -collection     Collection name in MongoDB database
+    -insert         Insert into database [optional/default]
+    -update         Update database
+    -read           Read from database
+    -remove         Remove from database
     -help           Shows this message
 \n";
 
@@ -62,29 +62,38 @@ GetOptions(
     'force:1'       =>\$FORCE,
     'mongo:s'       =>\$MONGODB,
     'collection:s'  =>\$COLLECTION,
-    'task:s'        =>\$TASK,
-    'update:s'      =>\$UPDATE,
-    'query:s{1,}'   =>\@QUERY,
+    'insert+'       =>\$INSERT,
+    'update:s{1,}'  =>\@UPDATE,
+    'read:s{1,}'    =>\@READ,
+    'remove:s{1,}'  =>\@REMOVE,
     help            =>sub{pod2usage($usage);}
 )or pod2usage(2);
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # CALLS
 argChecks();
 $PID = startMongoDB($MONGODB, $outDir);
-if ($TASK eq "insert") {
+if ($INSERT) {
     callEutil(\@IDS, $PID, $MONGODB, $COLLECTION);
 } else {
-    sendToMongo($PID, $MONGODB, $COLLECTION, $TASK);
+    sendToMongo($PID, $MONGODB, $COLLECTION, \@UPDATE, \@READ, \@REMOVE);
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # SUBS
 sub argChecks { #Check Arguments/Parameters
     # Pase Query Field => Value Pairs
-    if (@QUERY) {
-        parseQuery(@QUERY);
+    if (@UPDATE) {
+        parseQuery(@UPDATE);
+    } elsif (@READ) {
+        say "READ detected";
+        parseQuery(@READ);
+    } elsif (@REMOVE) {
+        parseQuery(@REMOVE);
+    } else {
+        say "Inserting into database..\n";
+        $INSERT = 1;
     }
     # Skip ID Check if accessing DB Only
-    unless (@QUERY) {
+    unless (!defined $INSERT) {
         # File vs ID List
         if ($FILE ne "") {
             checkFile($FILE);
@@ -98,7 +107,7 @@ sub argChecks { #Check Arguments/Parameters
     unless($DATABASE ne "nuccore") {
         say "Did not provide an NCBI database, -db nucleotide. Default \"$DATABASE\" used.";
     }
-    unless ($COLLECTION ne "Download") {
+    unless ($COLLECTION ne "nuccore") {
         say "No database collection name entered. Defaulting to \"$COLLECTION\" as collection name.";
     }
     unless ($MONGODB ne "NCBI_database") {
@@ -150,22 +159,24 @@ sub callEutil { #Get NCBI File(s), Distribute DB Tasks
 }
 
 sub sendToMongo {
-    my ($PID, $MONGODB, $COLLECTION, $TASK) = @_;
+    my ($PID, $MONGODB, $COLLECTION, $UPDATE, $READ, $REMOVE) = @_;
     # Dereference
-    # my @IDS = @$IDS;
+    my @UPDATE = @$UPDATE;
+    my @READ = @$READ;
+    my @REMOVE = @$REMOVE;
 
     # Iterate Through Each Query Field<->Value Pair
     foreach my $field (keys %fieldValues) {
         foreach my $value (keys $fieldValues{$field}) {
             # Delegate DB Task
-            if ($TASK eq "update") {
+            if (@UPDATE) {
                 updateData($field, $value, $MONGODB, $COLLECTION);
-            } elsif ($TASK eq "read") {
+            } elsif (@READ) {
                 readData($field, $value, $MONGODB, $COLLECTION);
-            } elsif ($TASK eq "remove") {
+            } elsif (@REMOVE) {
                 removeData($field, $value, $MONGODB, $COLLECTION);
             } else {
-                die "ERROR: No database operation found! Default is \"insert\", passed was \"$TASK\".", $!;
+                die "ERROR: No database operation found!", $!;
             }
         }
     }
@@ -173,6 +184,7 @@ sub sendToMongo {
 }
 
 sub parseQuery {
+    my (@QUERY) = @_;
     foreach(@QUERY) {
         chomp;
         $_ =~ /(.+):(.+)/;
