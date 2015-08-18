@@ -1,4 +1,4 @@
-usage<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
   <head>
     <meta charset='utf-8'>
@@ -19,7 +19,7 @@ usage<!DOCTYPE html>
 
         <header>
           <h1>Tango</h1>
-          <h2>Download NCBI files and store relevant in local MongoDB database</h2>
+          <h2>Download NCBI files and store relevant information in local MongoDB database</h2>
         </header>
 
         <section id="downloads" class="clearfix">
@@ -41,7 +41,7 @@ usage<!DOCTYPE html>
 <h2>
 <a id="usage" class="anchor" href="#usage" aria-hidden="true"><span class="octicon octicon-link"></span></a>Usage</h2>
 
-<p>Collect, store, and retrieve records from NCBI with just the GI number. Uses <a href="http://www.ncbi.nlm.nih.gov/books/NBK25497/">NCBI's E-Utilities</a> interface and <a href="https://www.mongodb.org/">MongoDB</a> as a database for local storage.</p>
+<p>Collect, store, and retrieve records from NCBI with just the GI number. Uses <a href="http://www.ncbi.nlm.nih.gov/books/NBK25497/">NCBI's E-Utilities</a> interface and <a href="https://www.mongodb.org/">MongoDB</a> as a database for as a database for storing locally the most relevant information. <strong>Please check <a href="#dependencies">dependencies</a></strong> are locally installed before running.</p>
 
 <p>The program will connect and download the file from NCBI corresponding to the GI number(s) provided and the following are extracted and stored in a MongoDB database: GI, accession, sequence, version, locus, organism, sequence length, gene, protein ID, translation.</p>
 
@@ -81,7 +81,7 @@ tango.pl -id 74960989 4165050 -insert
 <h4>
 <a id="update" class="anchor" href="#update" aria-hidden="true"><span class="octicon octicon-link"></span></a>Update</h4>
 
-<p>To update data (documents) stored in the database, provide the <code>-update</code> flag followed by your query in format <code>field:value</code> you want to update. You will be asked what field you want updated in that document.</p>
+<p>To update data (documents) stored in the database, provide the <code>-update</code> flag followed by your query in format <code>field:value</code> you want to update. You will be asked the field you wish to update in that document.</p>
 
 <p>The following looks for the document with <code>_id field</code> matching <code>34577062</code>.</p>
 
@@ -95,12 +95,13 @@ Available fields are:   _id accession sequence version locus organism seqLength 
 
 What field do you want? sequence
 What is the NEW value for sequence field? NEWSEQUENCE
+Document 34577062 updated, sequence field changed to NEWSEQUENCE.
 </code></pre>
 
 <h4>
 <a id="read" class="anchor" href="#read" aria-hidden="true"><span class="octicon octicon-link"></span></a>Read</h4>
 
-<p>To read data (documents) stored in the database, provide the <code>-read</code> flag followed by your query in format <code>field:value</code>. You will be asked what field you want to get from that document and reports back with result.</p>
+<p>To read data (documents) stored in the database, provide the <code>-read</code> flag followed by your query in format <code>field:value</code>. You will be asked what field from the document you want to report back.</p>
 
 <p>The following reads documents with <code>_id fields</code> matching <code>34577062</code> and <code>74960989</code>. </p>
 
