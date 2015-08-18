@@ -2,7 +2,7 @@
 &nbsp;
 
 ##Usage
-Collect, store, and retrieve records from NCBI with just the GI number. Uses [NCBI's E-Utilities](http://www.ncbi.nlm.nih.gov/books/NBK25497/) interface and [MongoDB](https://www.mongodb.org/) as a database for storing locally the most relevant information. **Please check dependencies** are locally installed before running. 
+Collect, store, and retrieve records from NCBI with just the GI number. Uses [NCBI's E-Utilities](http://www.ncbi.nlm.nih.gov/books/NBK25497/) interface and [MongoDB](https://www.mongodb.org/) as a database for storing locally the most relevant information. 
 
 The program will connect and download the file from NCBI corresponding to the GI number(s) provided and the following are extracted and stored in a MongoDB database: 
 >GI, accession, sequence, version, locus, organism, sequence length, gene, protein ID, translation
@@ -24,16 +24,20 @@ This creates a local database that can be accessed downstream for many applicati
     -remove         Remove from database
     -help           Shows help message
 
+**Please check dependencies** are locally installed before running. 
 
+&nbsp;
 ###Database Operations
 ####Insert
 To insert new data (documents) in the database, provide the GI number(s) with the optional `-insert` flag. 
 
 The following have the same function:
 
-	tango.pl -file gis.csv	
-	tango.pl -file gis.csv -insert 
-	tango.pl -id 74960989 4165050 -insert
+	./tango.pl -file gis.csv	
+	./tango.pl -file gis.csv -insert 
+	./tango.pl -id 74960989 4165050 -insert
+
+![](http://andresbreton.com/downloads/insertExample.png)
 
 
 ####Update
@@ -41,7 +45,7 @@ To update data (documents) stored in the database, provide the `-update` flag fo
 
 The following looks for the document with `_id field` matching `34577062`:
 
-	tango.pl -update _id:34577062
+	./tango.pl -update _id:34577062
 	
 It will then tell you which document you are about to update and ask which field you wish to change.
 
@@ -58,15 +62,16 @@ To read data (documents) stored in the database, provide the `-read` flag follow
 
 The following reads documents with `_id fields` matching `34577062` and `74960989`:
 
-	tango.pl -read _id:34577062 _id:74960989
+	./tango.pl -read _id:34577062 _id:74960989
 
+![](http://andresbreton.com/downloads/readExample.png)
 
 ####Remove
 To remove data (documents) stored in the database, provide the `-remove` flag followed by your query in format `field:value` you want removed.
 
 The following removes documents with `_id fields` matching `34577062` and `74960989`:
 
-	tango.pl -remove _id:34577062 _id:74960989
+	./tango.pl -remove _id:34577062 _id:74960989
 
 
 &nbsp;
@@ -82,7 +87,3 @@ You need to have the following installed:
 	* SeqFeatureI
 
 2. [MongoDB](https://www.mongodb.org/downloads) with [MongoDB Perl Driver] (http://search.cpan.org/dist/MongoDB/)
-
-
-##[License] (https://github.com/bretonics/tango/blob/master/LICENSE)
-Site this repo.
