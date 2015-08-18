@@ -10,14 +10,17 @@ use lib (dirname abs_path $0). "/lib";
 use Eutil; use Parser; use Database;
 
 
-# =============================================
+# =============================================================================
 #
-#	CAPITAN: Andres Breton
-#	FILE: ncbiScrpR.pl
-#   USAGE:
-#	LICENSE:
+#	CAPITAN:  Andres Breton
+#	FILE: tango.pl
+#	LICENSE:  GPL2
+#   USAGE:  Collect, store, and retrieve records from NCBI with just the GI number.
+#           Uses NCBI's E-Utilities interface and MongoDB as a database for
+#           storing locally the most relevant information.
+#   DEPENDENCIES:   BioPerl modules
 #
-# =============================================
+# =============================================================================
 
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -84,7 +87,6 @@ sub argChecks { #Check Arguments/Parameters
     if (@UPDATE) {
         parseQuery(@UPDATE);
     } elsif (@READ) {
-        say "READ detected";
         parseQuery(@READ);
     } elsif (@REMOVE) {
         parseQuery(@REMOVE);
