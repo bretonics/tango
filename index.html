@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <link href='https://fonts.googleapis.com/css?family=Chivo:900' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-dark.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <title>Tango by bretonics</title>
+  </head>
+
+  <body>
+    <div id="container">
+      <div class="inner">
+
+        <header>
+          <h1>Tango</h1>
+          <h2>Download NCBI files and store relevant in local MongoDB database</h2>
+        </header>
+
+        <section id="downloads" class="clearfix">
+          <a href="https://github.com/bretonics/tango/zipball/master" id="download-zip" class="button"><span>Download .zip</span></a>
+          <a href="https://github.com/bretonics/tango/tarball/master" id="download-tar-gz" class="button"><span>Download .tar.gz</span></a>
+          <a href="https://github.com/bretonics/tango" id="view-on-github" class="button"><span>View on GitHub</span></a>
+        </section>
+
+        <hr>
+
+        <section id="main_content">
+          <h1>
+<a id="tango" class="anchor" href="#tango" aria-hidden="true"><span class="octicon octicon-link"></span></a>Tango</h1>
+
+<hr>
+
+<hr>
+
+<h2>
+<a id="usage" class="anchor" href="#usage" aria-hidden="true"><span class="octicon octicon-link"></span></a>Usage</h2>
+
+<p>Collect, store, and retrieve records from NCBI with just the GI number. Uses <a href="http://www.ncbi.nlm.nih.gov/books/NBK25497/">NCBI's E-Utilities</a> interface and <a href="https://www.mongodb.org/">MongoDB</a> as a database for local storage.</p>
+
+<p>The program will connect and download the file from NCBI corresponding to the GI number(s) provided and the following are extracted and stored in a MongoDB database: GI, accession, sequence, version, locus, organism, sequence length, gene, protein ID, translation.</p>
+
+<p>This creates a local database that can be accessed downstream for many applications. Documents can be inserted, updated, read, and removed in order to have the database you wish.</p>
+
+<h3>
+<a id="options" class="anchor" href="#options" aria-hidden="true"><span class="octicon octicon-link"></span></a>Options</h3>
+
+<pre><code>-ids            ID(s)
+-file           File with ID(s) [CSV or TXT]
+-db             Database (Nucleotide, protein, etc..) [optional]
+-type           gb, fasta, etc... [optional]
+-force          Force download? [optional]
+-mongo          MongoDB database name
+-collection     Collection name in MongoDB database
+-insert         Insert into database [optional/default]
+-update         Update database
+-read           Read from database
+-remove         Remove from database
+-help           Shows help message
+</code></pre>
+
+<h3>
+<a id="database-operations" class="anchor" href="#database-operations" aria-hidden="true"><span class="octicon octicon-link"></span></a>Database Operations</h3>
+
+<h4>
+<a id="insert" class="anchor" href="#insert" aria-hidden="true"><span class="octicon octicon-link"></span></a>Insert</h4>
+
+<p>To insert new data (documents) in the database, provide the your GI number(s) with the optional <code>-insert</code> flag.</p>
+
+<pre><code>tango.pl -file gis.csv  
+tango.pl -file gis.csv -insert 
+tango.pl -id 74960989 4165050 -insert
+</code></pre>
+
+<h4>
+<a id="update" class="anchor" href="#update" aria-hidden="true"><span class="octicon octicon-link"></span></a>Update</h4>
+
+<p>To update data (documents) stored in the database, provide the <code>-update</code> flag followed by your query in format <code>field:value</code> you want to update. You will be asked what field you want updated in that document.</p>
+
+<p>The following looks for the document with <code>_id field</code> matching <code>34577062</code>.</p>
+
+<pre><code>tango.pl -update _id:34577062
+</code></pre>
+
+<p>It will then tell you which document you are about to update and ask which field you would like to update.</p>
+
+<pre><code>UPDATING _id record [34577062] in database...
+Available fields are:   _id accession sequence version locus organism seqLength gene proteinID translation
+
+What field do you want? sequence
+What is the NEW value for sequence field? NEWSEQUENCE
+</code></pre>
+
+<h4>
+<a id="read" class="anchor" href="#read" aria-hidden="true"><span class="octicon octicon-link"></span></a>Read</h4>
+
+<p>To read data (documents) stored in the database, provide the <code>-read</code> flag followed by your query in format <code>field:value</code>. You will be asked what field you want to get from that document and reports back with result.</p>
+
+<p>The following reads documents with <code>_id fields</code> matching <code>34577062</code> and <code>74960989</code>. </p>
+
+<pre><code>tango.pl -read _id:34577062 _id:74960989
+</code></pre>
+
+<h4>
+<a id="remove" class="anchor" href="#remove" aria-hidden="true"><span class="octicon octicon-link"></span></a>Remove</h4>
+
+<p>To remove data (documents) stored in the database, provide the <code>-remove</code> flag followed by your query in format <code>field:value</code> you want removed.</p>
+
+<p>The following removes documents with <code>_id fields</code> matching <code>34577062</code> and <code>74960989</code>.</p>
+
+<pre><code>tango.pl -remove _id:34577062 _id:74960989
+</code></pre>
+
+<h2>
+<a id="dependencies" class="anchor" href="#dependencies" aria-hidden="true"><span class="octicon octicon-link"></span></a>Dependencies</h2>
+
+<p>You need to have the following installed:</p>
+
+<ol>
+<li>
+<p><a href="http://www.bioperl.org/wiki/Main_Page">BioPerl</a></p>
+
+<p><strong>Modules:</strong></p>
+
+<ul>
+<li>Eutilities</li>
+<li>GenBank<br>
+</li>
+<li>SeqFeatureI</li>
+</ul>
+</li>
+<li><p><a href="https://www.mongodb.org/downloads">MongoDB</a> with <a href="http://search.cpan.org/dist/MongoDB/">MongoDB Perl Driver</a></p></li>
+</ol>
+
+<h2>
+<a id="license" class="anchor" href="#license" aria-hidden="true"><span class="octicon octicon-link"></span></a>License</h2>
+
+<p>See <a href="https://github.com/bretonics/tango/blob/master/LICENSE">LICENSE</a></p>
+        </section>
+
+        <footer>
+          Tango is maintained by <a href="https://github.com/bretonics">bretonics</a><br>
+          This page was generated by <a href="https://pages.github.com">GitHub Pages</a>. Tactile theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.
+        </footer>
+
+        
+      </div>
+    </div>
+  </body>
+</html>
