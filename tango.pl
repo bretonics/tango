@@ -12,9 +12,9 @@ use Eutil; use Parser; use Database;
 
 # =============================================================================
 #
-#	CAPITAN:  Andres Breton
-#	FILE: tango.pl
-#	LICENSE:  GPL2
+#   CAPITAN:  Andres Breton
+#   FILE: tango.pl
+#   LICENSE:  GPL2
 #   USAGE:  Collect, store, and retrieve records from NCBI with just the GI number.
 #           Uses NCBI's E-Utilities interface and MongoDB as a database for
 #           storing locally the most relevant information.
