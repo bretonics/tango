@@ -1,10 +1,10 @@
 #[Tango](https://github.com/bretonics/tango/zipball/master)
 [![GitHub license](https://img.shields.io/badge/License-GPL2-blue.svg)](http://www.gnu.org/licenses/gpl-2.0.html)
-[![Github Issues](http://githubbadges.herokuapp.com/bretonics/scripter/issues.svg)](https://github.com/bretonics/scripter/issues)
-[![Pending Pull-Requests](http://githubbadges.herokuapp.com/bretonics/scripter/pulls.svg)](https://github.com/bretonics/scripter/pulls)
-![](https://reposs.herokuapp.com/?path=bretonics/scripter&color=orange)
+[![Github Issues](http://githubbadges.herokuapp.com/bretonics/tango/issues.svg)](https://github.com/bretonics/tango/issues)
+[![Pending Pull-Requests](http://githubbadges.herokuapp.com/bretonics/tango/pulls.svg)](https://github.com/bretonics/tango/pulls)
+![](https://reposs.herokuapp.com/?path=bretonics/tango&color=orange)
 
->Download source code by clicking **Tango** title above or [here](https://github.com/bretonics/tango/zipball/master). 
+>Download source code by clicking **Tango** title above or [here](https://github.com/bretonics/tango/zipball/master).
 
 >**Please check that the list of [dependencies](#dependencies)** below are locally installed before running.
 
@@ -13,7 +13,7 @@
 ##Usage
 Collect, store, and retrieve Genbank records from NCBI with just the GI number. Using [NCBI's E-Utilities](http://www.ncbi.nlm.nih.gov/books/NBK25497/) interface to fetch records and [MongoDB](https://www.mongodb.org/) as a local database for storage, the program essentially curates a **local** database that only contains the records you need with the most significant information. This facilitates maintaining a very specific dataset that can be accessed in downstream analysis. No more looking up NCBI files again!
 
-When provided with GI ID(s), the program will connect and download the corresponding file(s) from NCBI, extract the most important data, and store the following in a MongoDB database: 
+When provided with GI ID(s), the program will connect and download the corresponding file(s) from NCBI, extract the most important data, and store the following in a MongoDB database:
 >GI, accession, sequence, version, locus, organism, sequence length, gene, protein ID, translation
 
 Applying specific flags, documents can be created, updated, read, and removed in the MongoDB database. There are also options to name a database and the collection. For more information on how MongoDB stores it's data, visit [MongoDB's documentation](http://docs.mongodb.org/manual/core/crud-introduction/).
@@ -30,9 +30,9 @@ Applying specific flags, documents can be created, updated, read, and removed in
     -update         Update database
     -read           Read from database
     -remove         Remove from database
-    -help           Shows help message 
+    -help           Shows help message
 
-Ex.) You may choose to create different databases by supplying the `-mongo` flag followed by the desired database name: `-mongo Axolotl`. 
+Ex.) You may choose to create different databases by supplying the `-mongo` flag followed by the desired database name: `-mongo Axolotl`.
 
 Or choose a different collection by passing the `-collection` flag followed by the desired collection name: `-collection Protein`.
 
@@ -43,24 +43,24 @@ These are optional as defaults have been assigned to them already.
 
 
 ###Insert
-To insert new data (documents) in the database, provide the GI number(s) with the optional `-insert` flag. 
+To insert new data (documents) in the database, provide the GI number(s) with the optional `-insert` flag.
 
 The following have the same function:
 
-	./tango.pl -file Examples/gis.csv	
-	./tango.pl -file Examples/gis.txt -insert 
+	./tango.pl -file Examples/gis.csv
+	./tango.pl -file Examples/gis.txt -insert
 	./tango.pl -id 74960989 4165050 -insert
 
 ![](http://andresbreton.com/downloads/insertExample.png)
 
-&nbsp;
+
 ###Update
 To update data (documents) stored in the database, provide the `-update` flag followed by the document you want to access in format `field:value` you want to update. You will be asked the field you wish to update in that document.
 
 The following looks for the document with `_id field` matching `34577062`:
 
 	./tango.pl -update _id:34577062
-	
+
 It will then tell you which document you are about to update and ask which field you wish to change:
 
 	UPDATING _id record [34577062] in database...
@@ -91,7 +91,7 @@ The following removes documents with `_id fields` matching `34577062` and `74960
 
 
 ##Dependencies
-<a name="dependencies"></a> 
+<a name="dependencies"></a>
 You need to have the following installed:
 
 1. [BioPerl](http://www.bioperl.org/wiki/Main_Page)
@@ -101,5 +101,5 @@ You need to have the following installed:
 	* [GenBank](http://www.bioperl.org/wiki/Module:Bio::DB::GenBank)
 	* [SeqFeatureI](http://www.bioperl.org/wiki/Module:Bio::SeqFeatureI)
 
-3. [MongoDB](https://www.mongodb.org/downloads) 
+3. [MongoDB](https://www.mongodb.org/downloads)
 	* [MongoDB Perl Driver] (http://search.cpan.org/dist/MongoDB/)
