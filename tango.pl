@@ -25,7 +25,7 @@ use Eutil; use Parser; use Database;
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # VARIABLES
-my $outDir = createDownloadDir();
+my $outDir = createOutputDir("Data");
 my $email = 'breton.a@husky.neu.edu'; #use your own email
 my ($NCBIfile, $NCBIstatus);
 my ($locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $proteinID, $translation);
@@ -42,7 +42,7 @@ my $COLLECTION = "nuccore";
 my ($INSERT, @UPDATE, @READ, @REMOVE);
 my $usage = "\n\n $0 [options]\n
 Options:
-    -ids            ID(s)
+    -id             ID(s)
     -file           File with ID(s) [CSV or TXT]
     -db             Database (Nucleotide, protein, etc..) [optional]
     -type           gb, fasta, etc... [optional]
@@ -208,8 +208,8 @@ sub parseFile { #Parse NCBI File
     return $locus, $seqLen, $accession, $version, $gi, $organism, $sequence, $gene, $proteinID, $translation;
 }
 
-sub createDownloadDir {
-    my $outDir = "Data";
+sub createOutputDir {
+    my ($outDir) =  @_;
     if (! -e $outDir){
         `mkdir $outDir`;
     }
