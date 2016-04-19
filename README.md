@@ -19,7 +19,7 @@ When provided with GI ID(s), the program will connect and download the correspon
 Applying specific flags, documents can be created, updated, read, and removed in the MongoDB database. There are also options to name a database and the collection. For more information on how MongoDB stores it's data, visit [MongoDB's documentation](http://docs.mongodb.org/manual/core/crud-introduction/).
 
 ###Options
-    -ids            ID(s)
+    -id             ID(s)
     -file           File with ID(s) [csv or txt]
     -db             Database (Nucleotide, protein, etc..)
     -type           gb, fasta, etc...
