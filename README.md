@@ -1,7 +1,7 @@
 #[Tango](https://github.com/bretonics/tango/zipball/master)
 [![GitHub license](https://img.shields.io/badge/License-GPL2-blue.svg)](http://www.gnu.org/licenses/gpl-2.0.html)
-[![Github Issues](http://githubbadges.herokuapp.com/bretonics/tango/issues.svg)](https://github.com/bretonics/tango/issues)
-[![Pending Pull-Requests](http://githubbadges.herokuapp.com/bretonics/tango/pulls.svg)](https://github.com/bretonics/tango/pulls)
+[![Github Issues](http://githubbadges.herokuapp.com/bretonics/tango/issues)](https://github.com/bretonics/tango/issues)
+[![Pending Pull-Requests](http://githubbadges.herokuapp.com/bretonics/tango/pulls)](https://github.com/bretonics/tango/pulls)
 ![](https://reposs.herokuapp.com/?path=bretonics/tango&color=orange)
 
 >Download source code by clicking **Tango** title above or [here](https://github.com/bretonics/tango/zipball/master).
